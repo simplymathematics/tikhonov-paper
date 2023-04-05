@@ -1,0 +1,300 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+
+
+\renewcommand{\v}[1]{\boldsymbol{#1}}
+\newcommand{\dep}{\,|\,}
+\newcommand{\T}{\mathrm{T}}
+
+\date{September 2022}
+
+
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+
+\begin{document}
+
+\title{Tikhonov Regularization and Adversarial Defense\\
+
+\thanks{Financial support has been provided in part by the Knut and Alice Wallenberg Foundation and by the eSSENCE Programme under the Swedish Government’s Strategic Research Initiative}
+}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Charles Meyers}
+\IEEEauthorblockA{\textit{dept. of Computing Science} \\
+\textit{Ume\aa~University}\\
+Ume\aa, Sweden \\
+cmeyers@cs.umu.se}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Tommy L\"ofstedt}
+\IEEEauthorblockA{\textit{dept. of Computing Science} \\
+\textit{Ume\aa~University}\\
+Ume\aa, Sweden \\
+tommy@cs.umu.se}
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Erik Elmroth}
+\IEEEauthorblockA{\textit{dept. of Computing Science} \\
+\textit{Ume\aa~University}\\
+Ume\aa, Sweden \\
+elmroth@cs.umu.se}
+}
+
+
+\maketitle
+
+
+\begin{abstract}
+    Modern neural network architectures have been shown to be quite weak to adversarial attacks (\textit{e.g.} induced failures), particularly in the case of high-dimensional datasets and models. For data streams like images and video, single-pixel, black-box, and fast varieties of attacks have already been demonstrated. While many defences have been proposed, they often rely on proxy models, ensemble methods, expensive dataset analysis, or multi-stage processes that involve generating adversarial examples and training against those new samples, real-time methods are less thoroughly explored. One such method involves training with Gaussian noise, which has shown to be effective at improving a model's ability to generalize beyond an `ideal' laboratory-collected dataset. In this paper, we expand prior theoretical understanding of an equivalent technique known as Tikhonov Regularization that includes a penalty term to regularize the scale of the model weights, reducing the tendency of a given model to have unstable output. Although prior work has explored this in relation to logistic and linear regression problems, we expand this to include multinomial regression. We also demonstrate that this method works in practice-in real time-against simulated failures (otherwise known as `adversarial attacks').
+\end{abstract}
+
+
+\section{Introduction}
+% TODO: re-organize later. Will just annotate several sources here for now.
+Hadamard \cite{hadamard1902problemes} originally discussed the concept of well-posed problems in 1902, while exploring the problems with inverting Maxwell's heat equations. He defined a well-posed problem as one in which it i) has a solution ii) has a unique solution and iii) the outputs are continuously differentiable with respect to the inputs. In the context of modern neural networks (i) and (iii) are generally assumed to be true either in theory or practice. However, (ii) is typically not satisified given that modern techniques rely on massive datasets and overdetermined training processes. This makes regularization critical to separating mundane numerical coincidences from `true' object and finding the global  (\textit{i.e.} unique) solution.
+
+For sufficiently complex systems, like autonomous vehicles, the number of unforeseen but otherwise normal road conditions is far too large to account for with data-collection alone, particularly given the real-world rarity of such edge cases and dataset augmentation techniques run the risk of overfitting on noise-augmented datasets \cite{koopman2016challenges}. This problem is compounded further in the context of \textit{adversarial} noise \cite{adversarialpatch, madry2017towards, chakraborty2018adversarial, biggio_evasion_2013, biggio_poisoning_2013, croce_reliable_2020, dohmatob_generalized_2019, fredrikson_model_2015, hopskipjump, kotyan2022adversarial}, in which an attacker intentionally generates small perturbations in the data that cause large changes in the output, resulting in a misclassification while optimizing for things like perturbation distance, number of queries, or the requisite run-time of an attack. 
+
+Luckily, Tikhonov regularization is a robust and theoretically sound way to generalize a model under the assumption that the training data is noisy. Bishop et al. \cite{bishop1995training} showed that, in theory, this method words on both linear and logistic regression under relatively simple assumptions and that the regularization technique is nearly identical to training with noise. Golub et al. \cite{golub1999tikhonov} demonstrated that this method filters out noise along the vectors corresponding to the singular values of the input matrix, making it particularly effective for ill-posed problems (\textit{e.g.} overdetermined neural networks). They also demonstrated several methods for calculating the appropriate scaling factor for a given set of data. Further research \cite{zhao2011modified} proposed methods for calculating the error bounds for such a regularization method. A recent paper \cite{gerth2021new} reinterprets this method in the context of convergence properties, demonstrating an upper bound for the convergence rates of this Tikhonov process. Together, this provides a strong theoretical backdrop to exploit this as a defense against adversarial noise. 
+
+\section{Contributions}
+\begin{itemize}
+    \item We demonstrate that training with noise is equivalent to Tikhonov regularization. 
+    \item We derive the Tikhonov regularization equation for multinomial regression and cross-entropy loss. 
+    \item We demonstrate the efficacy of such a technique using synthetic data, linear regression, logistic regression, a simple neural network.
+    \item We calculate and verify the error bounds for a given set of adversarial constraints. ?
+    \item We derive the optimal regularization parameter ?
+    \item We 
+\end{itemize}
+
+\section{Definitions}
+
+\subsection{Ill-conditioned Problems}
+Ill-conditioned problems are optimization problems where the function being optimized is highly sensitive to small changes in the input. Let $f(x)$ be a function with domain $x \in \mathbb{R}^n$. The condition number of the function is defined as:
+\begin{equation}
+\kappa = \frac{|\nabla^2 f(x)|}{|\nabla f(x)|}
+\label{eq:condition_num}
+\end{equation}
+
+where $\nabla f(x)$ is the gradient of the function and $\nabla^2 f(x)$ is the Hessian matrix of the function. The condition number measures the sensitivity of the function to small changes in the input. A high condition number indicates that the function is highly sensitive, and a low condition number indicates that the function is relatively insensitive.
+
+A function is considered to be ill-conditioned if its condition number is high. This means that the function is highly sensitive to small changes in the input, which can make it difficult for optimization algorithms to find the global minimum. Ill-conditioned problems can arise in many different contexts, including in the training of neural networks. Importantly, for this value to be computable, both the Hessian ($\nabla ^2 f(x)$ ) and the Jacobian ($\nabla f(x)$) must (1) exist and (2) be continuous.
+
+\label{assumption:1}
+\label{assumption:2}
+
+\subsection{Lipschitz Continuity}
+A function, $f(x)$ is considered to be $\rho$-Lipschitz if and only if
+\begin{equation}
+| f(x_1) - f(x_2) | \leq \rho ||x_1 - x_2 ||~\forall x_1, x_2\, \in x
+\label{eq:lipschitz}
+\end{equation}
+This is an important property of neural networks because it ensures stability in the optimization process as noted by \cite{,,,,,,,}. This has been noted
+ in the context of both loss functions \cite{} and model weights \cite{} to ensure a stable model.
+
+\subsection{Noise}
+Regularization attempts to mitigate the effects of noise on a model, despite being a natural and omnipresent consequence of data collection. Let 
+\begin{equation} 
+x^* =  x + \epsilon, \epsilon \geq 0 \implies \epsilon = x^* - x.
+\label{eq:noise}
+\end{equation}
+
+where $\epsilon$ is some noise vector. If this noise vector is large enough, it can introduce error, called \textit{adversarial noise} in the literature \cite{,,,,,,}. For regressors, this might be signified by some critical distance, $\delta$ that reflects some specified adversarial loss threshold:
+
+$$
+| f(x) - f(x^*) | \geq \delta
+$$
+
+For a classification model, an adversarial sample is one in which
+
+$$
+y^* = f(x^*) \neq y = f(x)
+$$
+for some label $y$ (\textit{e.g.}~a misclassification), or it is one in which 
+
+$$
+|f(x^*) - f(x^*)| \geq \delta, 
+$$
+as in the regression example. Additionally, Bishop~\textit{et.~al.} showed that for \textit{any} noise distribution with variance, $\sigma^2$, $=1$ and mean, $\mu$, $= 0$, that:
+$$
+L(x^*) \approx  L_{tikhonov}
+$$
+where $L_{tikhonov}$ is defined below, in Eq.~\ref{eq:tikho_loss}
+\subsection{Loss Functions}
+Various loss functions are used for training machine learning models. Below we examine both the mean squared error loss ($L_{mse}(x, x^*)$) and cross entropy loss ($L_{ce}(x, x^*)$). $L_{mse}(x)$ is defined as:
+
+$$ 
+L_{mse}(x, y) = \frac{1}{n}\sum^n | y  - x|^2
+$$
+where $y$ is the true class labels.
+
+For classification systems, we introduction the notation $K(f(x))$ which corresponds to the \textit{classification} of the function output $f$ at sample $x$, such that $x \mapsto 1, 2, ...k \in K$ and where $y_i$ represents the true label for the $i$-th class. Below, we examine cross-entropy loss:
+
+$$
+L_{ce}(x, y) = -\sum_{i=1}^k y_i \log{f(x_i)}
+$$
+
+\subsection{Robustness}
+In context of adversarial attacks, we can say that the goal is to 
+
+\begin{equation}
+\min_{x \in B(\epsilon_{max})} L(x, y)
+\label{eq:robustness}
+\end{equation}
+
+where $B(\epsilon_{max})$ is the closed ball of radius $\epsilon_{max}$ centered at some samples, $x$, with labels, $y$.
+
+If we assume this loss function is $\rho$-Lipschitz, then for some noise vector ($x^* = x + \epsilon, \epsilon \leq \epsilon_{max}$), we can bound the loss function:
+
+\begin{equation}
+| L(x^*) - L(x) | \leq \rho || x^* - x ||_2 = \rho ||\epsilon||_2
+\label{eq:tikho_lip}
+\end{equation}
+
+
+\section{Tikhonov Regularization}
+Tikhonov regularization, also known as ridge regularization, is a method used in machine learning to prevent overfitting of a model by adding a regularization term to the cost function. This regularization term is a function of the Jacobian matrix, which is a matrix of partial derivatives that describes the sensitivity of the model's output with respect to its inputs. The regularization term is typically defined as the sum of the squares of the elements in the Jacobian matrix of the loss function ($\frac{\partial L(x)}{ \partial x}$), scaled by some scalar ($\lambda$), and added as a penalty to the original loss function ($L(x)$):
+
+\begin{equation}
+L_{Tikhonov} = L(x, \lambda) = L(x) + \lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||_2^2
+\label{eq:tikho_loss}
+\end{equation}
+
+Let $x^*$ be a perturbed input such that $|x - x^*|_2 \leq \delta$. We want to find the maximal $\delta$ such that the change in loss is minimized for the Tikhonov regularized loss function $L(x, \lambda)$. The minimization problem them becomes.
+
+$$
+\min_{\lambda} L(x) + \lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||_2^2
+$$
+
+The overarching goal is to find a value of $\lambda$ such that the loss is bounded by some change in loss $\delta$ within some sphere of radius $\epsilon$ around some samples, $x$:
+\begin{equation}
+\min_{\lambda}{|L(x + \epsilon, \lambda) - L(x, \lambda)| }\leq \delta~\forall x + \epsilon \leq \epsilon_{max}
+\label{eq:delta}
+\end{equation}
+
+\textbf{From here on, I need some guidance on the best direction...}
+
+ \subsection{Optimal $\lambda$}
+ Assuming that $\lambda>0$, we can solve this using a Lagrangian constrained optimization program.
+
+
+% \subsection{Optimal $\lambda$}
+% \label{lambda}
+% Recall Eq.\ref{eq:tikho_loss}:
+% $$
+% L(x, \lambda) = L(x) + \lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||_2^2
+% $$
+% By the chain rule, we know that:
+% $$
+% \frac{\partial L(x, \lambda)}{\partial x} = 2 \lambda  ||\frac{\partial L(x)}{\partial x}||_2^2 + 2 \lambda \frac{\partial^2 L(x, \lambda)}{\partial x^2}
+% $$
+% Setting this equal to zero gives us:
+% \begin{equation}
+% \frac{\partial L(x, \lambda)}{\partial x} = 2 \lambda  ||\frac{\partial L(x)}{\partial x}||_2^2 + 2 \lambda \frac{\partial^2 L(x, \lambda)}{\partial x^2} = 0
+% \label{eq:optimization}
+% \end{equation}
+% Under the assumption that our regularization is effective (\textit{e.g.}~that $\lambda > 0$), we can use Lagrange multipliers to solve for $\lambda$
+
+
+% We can now use the fact that $L(x, \lambda)$ is minimized at $x^$ to get a lower bound on $L(x^)$:
+
+% \begin{align*}
+% L(x^,\lambda) &= L(x + \epsilon, \lambda) \\
+% &\geq L(x^, \lambda) \\
+% &= L(x^) + \lambda^2 || \frac{\partial L(x^,\lambda)}{ \partial x} ||_2^2 \tag{definition of $L(x,\lambda)$}\\
+% &= L(x^) + \lambda^2 || \frac{\partial L(x^,\lambda)}{ \partial x} + \frac{\partial L(\epsilon, \lambda)}{ \partial x} ||_2^2 \tag{triangle inequality}\\
+% &\geq L(x^) + \lambda^2 || \frac{\partial L(x^,\lambda)}{ \partial x} ||_2^2 - 2\lambda^2 || \frac{\partial L(\epsilon, \lambda)}{ \partial x} ||_2^2 \tag{Cauchy-Schwarz inequality}\\
+% &\geq L(x^) + \lambda^2 || \frac{\partial L(x^,\lambda)}{ \partial x} ||2^2 - 2\lambda^2 \rho^2 \epsilon{max}^2 \tag{Lipschitz continuity}\\
+% \end{align*}
+
+
+\subsection{Error Bounds}
+
+Given a $\rho$-Lipschitz continuous loss function $L(x,\lambda)$, we have:
+
+$$
+\mathrm{TODO}\dots
+$$
+
+For a given $\ell_1$ norm of the gradient ($||\cdot ||_1$)):
+
+$$
+\mathrm{TODO}\dots
+$$
+
+
+% Now let's use the definition of $L(x,\lambda)$ to get an upper bound on $L(x^*)$:
+% % \begin{equation}
+% \begin{align*}
+% &= L(x^*,\lambda) 
+% &= L(x + \epsilon, \lambda) \\
+% &= L(x) + \lambda^2 || \frac{\partial L(x + \epsilon, \lambda)}{ \partial x} ||_2^2 \tag{definition of $L(x,\lambda)$}\\
+% &\leq L(x) + \lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} + \frac{\partial L(\epsilon, \lambda)}{ \partial x} ||_2^2 \tag{triangle inequality}\\
+% &\leq L(x) + 2\lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||_2^2 + 2\lambda^2 || \frac{\partial L(\epsilon, \lambda)}{ \partial x} ||_2^2 \tag{Cauchy-Schwarz inequality}\\
+% &\leq L(x) + 2\lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||_2^2 + 2\lambda^2 \rho^2 || \epsilon ||_2^2 \tag{Lipschitz continuity}\\
+% &= L(x) + 2\lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||2^2 + 2\lambda^2 \rho^2 \epsilon_1^2 +  \dots + 2\lambda^2 \rho^2 \epsilon_n^2 \\
+% &= L(x) + 2\lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||2^2 + 2\lambda^2 \rho^2 \sum{i=1}^n \epsilon_i^2 \\
+% &\leq L(x) + 2\lambda^2 \rho^2 \epsilon_{max}^2 + 2\lambda^2 || \frac{\partial L(x, \lambda)}{ \partial x} ||_2^2 \tag{$\epsilon_i \leq \epsilon $}\\
+% \end{align*}
+
+
+
+
+
+\subsection{Solving for $\epsilon$}
+
+Like, with $\lambda$, we can use Lagrange multipliers to solve for $\epsilon$, this time adding the constraint from Eq.~\ref{eq:delta}. 
+$$
+TODO\dots
+$$
+
+\subsection{Robustness}
+
+ Therefore, to minimize  $\sum_{i=1}^n \Delta L(x_i, \lambda) \forall{x_i + \epsilon}~\in~B(\epsilon_{max})$,
+$$
+TODO\dots
+$$
+
+ 
+Using Green's Theorem on the closed ball, $B(\epsilon_{max})$, with radius $\epsilon_{max}$ (see:~Eq.~\ref{eq:robustness}), we can compute the expected loss around an initial set of samples,  ~$\var{x_0}$:
+$$
+TODO\dots
+$$
+
+\section{On the question of Novelty}
+\subsection{Formalize the above?}
+\subsection{Iterative Search Algorithms ?}
+The above bounds assume that we know $\lambda, \epsilon$ explicitly. In reality, this may be difficult or infeasible to measure. Instead, we can use a stochastic gradient descent algorithm.
+
+
+
+\subsubsection{Cross-validation?}
+todo???
+
+\subsubsection{Pareto optimization?}
+todo????
+
+\subsubsection{Maximum Likelihood estimation}
+todo???
+
+\subsection{Jacobian approximation methods?}
+
+\subsection{Noise distributions?}
+
+\subsection{}
+
+
+% Recalling Eq.~\ref{eq:optimization}
+
+% \bibliographystyle{IEEEtran}
+% \bibliography{bib}
+
+\end{document}

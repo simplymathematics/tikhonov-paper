@@ -1,0 +1,46 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+
+
+\renewcommand{\v}[1]{\boldsymbol{#1}}
+\newcommand{\dep}{\,|\,}
+\newcommand{\T}{\mathrm{T}}
+
+\date{September 2022}
+
+
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+
+\begin{document}
+
+
+
+\section{Prompt}
+
+prove that cross entropy loss  function $L$ for a tikhonov regularized logistic regressor is $\leq \frac{ \log{2} \sigam^2}{n} + \frac{\lambda}{n} \sum_{i=1}^p \sum_{i=1}^m \sum_{i=1}^n J^2_{w_{i,j}}
+
+\section{Response}
+
+To prove this, we can use the definition of the cross entropy loss function, which is given by:
+
+$$L = - \frac{1}{n} \sum_{i=1}^n \left[ y_i \log \hat{y}_i + (1 - y_i) \log (1 - \hat{y}i) \right] + \frac{\lambda}{2n} \sum{i=1}^p w_i^2$$
+
+where $y_i$ and $\hat{y}_i$ are the true and predicted labels for the $i$th sample, respectively, $n$ is the number of samples, $p$ is the number of parameters in the model, $w_i$ are the parameters of the model, and $\lambda$ is the regularization constant.
+
+We can write the first term in the loss function as:
+
+$$- \frac{1}{n} \sum_{i=1}^n \left[ y_i \log \hat{y}_i + (1 - y_i) \log (1 - \hat{y}i) \right] = \frac{1}{n} \sum{i=1}^n \log \frac{1}{\hat{y}_i} + \log \frac{1}{1 - \hat{y}_i}$$
+
+Using the inequality $\log \frac{1}{x} \le \frac{1}{x}$ for $0 < x \le 1$, we can upper bound the first term in the loss function as:
+\end{document}
